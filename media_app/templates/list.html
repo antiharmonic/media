@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/dt-1.10.23/cr-1.5.3/fh-3.1.8/datatables.min.css"/>
+{% endblock %}
+{% block content %}
+
+<table class="table" id="media_list">
+  <thead>
+    <tr>{% for c in cols %}
+      <th>{{headers[c]}}</th>{% endfor %}
+    </tr>
+   </thead>
+   <tbody>
+{% for m in media %}
+  <tr>
+    {% for c in cols %}<td>{{m[c]}}</td>{% endfor %}
+  </tr>
+{% endfor %}
+</tbody>
+</table>
+{% endblock %}
+{% block scripts %}
+<script src="//code.jquery.com/jquery-3.5.1.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/v/bs4/dt-1.10.23/cr-1.5.3/fh-3.1.8/datatables.min.js"></script>
+<script language="javascript">
+$(document).ready( function () {
+    $('#media_list').DataTable();
+});
+</script>
+{% endblock %}

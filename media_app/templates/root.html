@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+{% endblock %}
+
+{% block content %}
+<div class="starter-template text-center py-5 px-3">
+<h1>Latest entries</h1>
+<table class="table table-hover">
+  <thead>
+  {% for header in cols %}
+    <th>{{ headers[header] }}</th>
+  {% endfor %}
+  </thead>
+{% for item in media %}
+  <tr>
+    {% for c in cols %}
+      <td>{% if item[c] %}{% if c == 'title'%}<a href="/edit/{{item['id']}}">{{item[c]}}</a>{% else %}{{ item[c] }}{% endif %}{%endif%}</td>
+    {% endfor %}
+  </tr>
+{% endfor %}
+</table>
+</div>
+{% endblock %}

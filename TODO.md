@@ -1,0 +1,5 @@
+- IMDB (and perhaps eventually goodreads, metacritic, etc) integration for autofill and posters
+- filter page for non-quick queries
+- and maybe track filters ran to make more quick-queries
+- pass quick query name to list page as a page header
+- further customization of datatables
