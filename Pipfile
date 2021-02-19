@@ -9,6 +9,7 @@ flask = "*"
 imdbpy = "*"
 psycopg2-binary = "*"
 configparser = "*"
+goodreads = "*"
 
 [dev-packages]
 

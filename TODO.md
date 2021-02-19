@@ -3,3 +3,4 @@
 - and maybe track filters ran to make more quick-queries
 - pass quick query name to list page as a page header
 - further customization of datatables
+- view page

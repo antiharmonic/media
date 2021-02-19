@@ -2,11 +2,17 @@
 {% block content %}
 <div class="row">
 <div class="col">
-<form>
+<form action="/api{% if media %}/update{% else %}/create{% endif %}" method="post">
+  <input type="hidden" name="media_integration_id" value="{% if media.integration_id %}{{media.integration_id}}{% endif %}" id="media_integration_id">
+  <input type="hidden" name="media_integration_image" value="{% if media.cover_image %}{{media.cover_image}}{% endif %}" id="media_integration_image_url">
+  <input type="hidden" name="media_integration_plot" value="{% if media.synopsis %}{{media.synopsis}}{% endif %}" id="media_integration_plot">
+  <input type="hidden" name="current_integration_id" value="{% if media.media_integration_id %}{{media.media_integration_id}}{%endif%}" id="current_integration_id">
+  <input type="hidden" name="new_media_integration_id" id="new_media_integration_id">
+  <input type="hidden" name="id" value="{% if media %}{{media.id}}{% endif %}">
   <fieldset>
     <div class="form-group mb-3">
       <label for="">Type</label>
-      <select class="form-control" name="media_type">
+      <select class="form-control" name="media_type" id="media_type_select">
         <option></option>
       {% for type in types %}
         <option value="{{type.id}}"{% if media and media.media_type == type.id%} selected{% endif %}>{{type.name}}</option>
@@ -15,27 +21,42 @@
     </div>
     <div class="form-group mb-3">
       <label for="">Title</label>
-      <input class="form-control" type="text" name="title"{% if media %} value="{{media.title}}"{% endif %}>
+      <input class="form-control" type="text" name="title"{% if media %} value="{{media.title}}"{% endif %} id="media_title">
     </div>
     <div class="form-group mb-3">
       <label for="">Subsection</label>
       <input class="form-control" type="text" name="subsection"{% if media %} value="{{media.subsection}}"{% endif %}>
     </div>
-    <div class="form-group mb-3">
-      <label for="">Start Date</label>
-      <input class="form-control" type="date" name="begin_date"{% if media %} value="{{media.begin_date}}"{% endif %}>
+    <div class="input-group">
+      <div class="col">
+      <label for="begin_date" class="form-control-label">Start Date</label>
+      </div>
+      <div class="col">
+      <label for="end_date" class="form-control-label">Finish Date</label>
+      </div>
+    </div>    
+    <div class="input-group mb-3">
+      <input class="form-control" type="date" name="begin_date" id="begin_date"{% if media %} value="{{media.begin_date}}"{% endif %}>
+      <input class="form-control" type="date" name="end_date" id="end_date"{% if media %} value="{{media.end_date}}"{% endif %}>
     </div>
-    <div class="form-group mb-3">
-      <label for="">Finish Date</label>
-      <input class="form-control" type="date" name="end_date"{% if media %} value="{{media.end_date}}"{% endif %}>
+    <div class="input-group">
+      <div class="col">
+        <label for="">Length</label>
+      </div>
+      <div class="col">
+        <label for="">Rating</label>
+      </div>
     </div>
-    <div class="form-group mb-3">
-      <label for="">Length</label>
-      <input class="form-control" type="number" name="length"{% if media %} value="{{media.length}}"{% endif %}> <span class="form-text" id="length_unit">{% if media %}{{units[media.length_unit]}}{% endif %}</span>
+    <div class="input-group">
+      <input class="form-control" type="number" name="length"{% if media %} value="{{media.length}}"{% endif %}> 
+      <input class="form-control" type="number" name="rating"{% if media %} value="{{media.rating}}"{% endif %}>
+    </div>
+    <div class="mb-3">
+    <span class="form-text" id="length_unit">{% if media %}{{units[media.length_unit]}}{% endif %}</span>
     </div>
     <div class="form-group mb-3">
       <label>Comments:</label>
-      <textarea class="form-control">{% if media and media.comments %}{{media.comments}}{% endif %}</textarea>
+      <textarea class="form-control" name="comments">{% if media and media.comments %}{{media.comments}}{% endif %}</textarea>
     </div>
     <div class="form-group mb-3">
       <input type="submit" value="{% if media %}Update{% else %}Create{% endif %}">
@@ -43,8 +64,10 @@
   </fieldset>
 </form>
 </div>
-<div class="col">
-Import coming soon?
+<div class="col" id="integration">
 </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/imdb.js" data-title="{{media.title}}"></script>
 {% endblock %}

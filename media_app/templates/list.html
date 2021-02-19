@@ -14,14 +14,13 @@
    <tbody>
 {% for m in media %}
   <tr>
-    {% for c in cols %}<td>{{m[c]}}</td>{% endfor %}
+    {% for c in cols %}<td>{% if m[c] %}{% if c == 'title' %}<a href="/view/{{m['id']}}">{{m[c]}}</a>{% else %}{{m[c]}}{% endif %}{% endif %}</td>{% endfor %}
   </tr>
 {% endfor %}
 </tbody>
 </table>
 {% endblock %}
 {% block scripts %}
-<script src="//code.jquery.com/jquery-3.5.1.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/dt-1.10.23/cr-1.5.3/fh-3.1.8/datatables.min.js"></script>
 <script language="javascript">
 $(document).ready( function () {
