@@ -10,6 +10,8 @@ imdbpy = "*"
 psycopg2-binary = "*"
 configparser = "*"
 goodreads = "*"
+jinja2-pluralize = "*"
+gunicorn = "*"
 
 [dev-packages]
 

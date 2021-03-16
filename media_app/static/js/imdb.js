@@ -74,8 +74,13 @@ function update_details(id, div_id) {
       detail_url = '/api/integration/ol/get/';
     }
     $.getJSON(detail_url + id, function(data) {
-      $(`${div_id} #integration_image`).html(`<img src="${data.image}" height="400">`);
+      if (data['image']) {
+        $(`${div_id} #integration_image`).html(`<img src="${data.image}" height="400">`);
+      }
       $(`${div_id} #integration_plot`).html(data.plot);
+      if (!orig_integration_id && data.length) {
+        $("#media_length").val(data.length);
+      }
     });
   }
 }

@@ -36,7 +36,7 @@
       </div>
     </div>    
     <div class="input-group mb-3">
-      <input class="form-control" type="date" name="begin_date" id="begin_date"{% if media %} value="{{media.begin_date}}"{% endif %}>
+      <input class="form-control" type="date" name="begin_date" id="begin_date" value="{% if media %}{{media.begin_date}}{% else %}{{g.today_str}}{% endif %}">
       <input class="form-control" type="date" name="end_date" id="end_date"{% if media %} value="{{media.end_date}}"{% endif %}>
     </div>
     <div class="input-group">
@@ -48,8 +48,8 @@
       </div>
     </div>
     <div class="input-group">
-      <input class="form-control" type="number" name="length"{% if media %} value="{{media.length}}"{% endif %}> 
-      <input class="form-control" type="number" name="rating"{% if media %} value="{{media.rating}}"{% endif %}>
+      <input class="form-control" type="number" name="length"{% if media %} value="{{media.length}}"{% endif %} id="media_length"> 
+      <input class="form-control" type="number" step="0.01" name="rating"{% if media %} value="{{media.rating}}"{% endif %} id="media_rating">
     </div>
     <div class="mb-3">
     <span class="form-text" id="length_unit">{% if media %}{{units[media.length_unit]}}{% endif %}</span>

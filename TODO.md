@@ -3,4 +3,6 @@
 - and maybe track filters ran to make more quick-queries
 - pass quick query name to list page as a page header
 - further customization of datatables
-- view page
+- view page or just keep edit page and upon save go back to the previous filter?
+- integration data pop up upon datatables hover
+- search auto fill?

@@ -9,6 +9,9 @@ from configparser import ConfigParser, ExtendedInterpolation
 import requests
 import os
 from imdb import IMDb
+from jinja2 import Environment
+from jinja2_pluralize import pluralize
+
 
 cfg = ConfigParser(interpolation=ExtendedInterpolation())
 cfg.read('config.ini')
@@ -24,9 +27,10 @@ def app_start():
     raise e
 
   return Flask(__name__)
-
 app = app_start()
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.filters['pluralize'] = pluralize
+
 api = Blueprint('action_only_endpoints', __name__, url_prefix='/api')
 header_translation = {
   'title': 'Title',
@@ -38,6 +42,9 @@ header_translation = {
   'length': 'Length',
   'comments': 'Comments'
 }
+
+min_year = 1986
+max_year = 2100
 
 type_unit = {
   '1': 1,
@@ -58,7 +65,10 @@ type_unit = {
 @app.before_request
 def get_db():
   g.db = db.get_connection()
-  g.today_str = str(date.today()-timedelta(days=365))
+  g.today_str = str(date.today())
+  g.year_ago_str = str(date.today()-timedelta(days=365))
+  g.current_year = str(date.today().year)
+
 
 ## View endpoints
 @app.route("/")
@@ -107,23 +117,35 @@ def view_list_page():
     end_date_cmp = '<='
   if not valid_cmp(begin_date_cmp):
     begin_date_cmp = '>='
-  completed = request.args.get('completed', False)
+  completed = request.args.get('completed', None)
   if completed == 'True':
     completed = True
-  else:
+  elif completed is not None:
     completed = False
   rating = request.args.get('rating', None)
   rating_cmp = request.args.get('rating_cmp', None)
   if not valid_cmp(rating_cmp):
     rating_cmp = '>='
   title = request.args.get('title', None)
+  onhold = boolean_resolve(request.args.get('onhold', None))
   rule = request.url_rule
+  started = request.args.get('started', True)
+  if started == 'True':
+    started = True
+  elif started != True:
+    started = False
   if 'search' in rule.rule:
     g.current_search = title
   media = list_media(begin_date=begin_date, end_date=end_date, rating=rating, completed=completed, title=title,
-                     begin_date_cmp=begin_date_cmp, end_date_cmp=end_date_cmp, rating_cmp=rating_cmp)
+                     begin_date_cmp=begin_date_cmp, end_date_cmp=end_date_cmp, rating_cmp=rating_cmp, onhold=onhold, started=started)
   return render_template("list.html", media=media, cols=['title', 'begin_date', 'end_date', 'rating', 'media_type_name'],  headers=header_translation)
 
+
+@app.route("/stats")
+@app.route("/stats/<year>")
+def view_stats_page(year=None):
+  stats = action_stats(year)
+  return render_template("stats.html", stats=stats)
 
 
 # API endpoints
@@ -147,8 +169,9 @@ def action_update_media():
   print(external)
   if 'create' in rule.rule:
     try:
-      res = g.db.query("""insert into media (title, begin_date, end_Date, media_type, rating, subsection, length, comments)
-                                    values (:title,:begin_date,:end_date,:media_type,:rating,:subsection,:length,:comments) returning id""",
+      res = g.db.query("""insert into media (title, begin_date, end_Date, media_type, rating, subsection, length, comments, length_unit)
+                                    values (:title,:begin_date,:end_date,:media_type,:rating,:subsection,:length,:comments,:length_unit) 
+                                    returning id""",
                                     title=media['title'], begin_date=media['begin_date'], end_date=media['end_date'], media_type=media['media_type'],
                                     rating=media['rating'], subsection=media['subsection'], length=media['length'], comments=media['comments'],
                                     length_unit=type_unit[media['media_type']]).first().as_dict()
@@ -173,6 +196,28 @@ def action_update_media():
 @api.route("/rewatch")
 def action_rewatch():
   pass
+
+
+@api.route("/stats")
+@api.route("/stats/<year>")
+def action_stats(year=None):
+  if year == None:
+    year = g.current_year
+  else:
+    year = int(year)
+    if year < min_year or year > max_year:
+      year = g.current_year
+  sql = """select mt.name, media.length_unit::integer, extract(year from end_date)::integer as "year",
+            count(media.id), sum(length) from media join media_type mt on mt.id = media.media_type
+            where end_date is not null and extract(year from end_date) = :year
+            group by 1, 2, 3 order by 2,3 desc"""
+  stats = g.db.query(sql, year=year)
+  rule = request.url_rule
+  if 'api' in rule.rule:
+    return Response(stats.export('json'), mimetype="application/json")
+  else:
+    return stats.as_dict()
+
 
 @api.route("/list")
 @api.route("/list/<type>")
@@ -231,7 +276,7 @@ def action_validate():
 
 # utility/common functions
 # i'm guessing this will be the largest function in terms of usage/utility
-def list_media(type=None, started=True, begin_date=None, begin_date_cmp=None, end_date=None, end_date_cmp=None, completed=None, years=None, limit=None, rating=None, rating_cmp=None, title=None):
+def list_media(type=None, started=True, begin_date=None, begin_date_cmp=None, end_date=None, end_date_cmp=None, completed=None, years=None, limit=None, rating=None, rating_cmp=None, title=None, onhold=None):
   predicates = list()
   if type is not None:
     type = type.lower()
@@ -241,18 +286,26 @@ def list_media(type=None, started=True, begin_date=None, begin_date_cmp=None, en
       type = valid_types[type]
       predicates.append('media_type = :type')
     # no else, if the type is in the list it will silenty fail and just include all types
-  if started:
+  if started == True:
     predicates.append('begin_date is not null')
+  elif started == False:
+    predicates.append('begin_date is null')
   if begin_date:
     predicates.append(f"begin_date {begin_date_cmp} :begin_date")
   if end_date:
     predicates.append(f"end_date {end_date_cmp} :end_date")
-  if completed:
+  if completed == True:
     predicates.append("end_date is not null")
+  elif completed == False:
+    predicates.append("end_date is null")
   if rating:
     predicates.append(f"rating {rating_cmp} :rating")
   if title:
     predicates.append("lower(title) like '%' || lower(:title) || '%'")
+  if onhold == True:
+    predicates.append("onhold = true")
+  elif onhold == False:
+    predicates.append("onhold = false")
   sql = "select media.*, mt.name as media_type_name from media join media_type mt on mt.id = media.media_type"
   if len(predicates) >= 1:
     sql += ' where ' + ' and '.join(predicates)
@@ -279,7 +332,7 @@ def imdb_info(id):
   ia = IMDb()
   id = str(id)
   imdb_info = ia.get_movie(id)
-  desired_keys = ['year', 'rating', 'cover url', 'plot']
+  desired_keys = ['year', 'rating', 'cover url', 'plot', 'runtimes']
   media_info = {'title': imdb_info.get('title')}
   for k in desired_keys:
     if k in imdb_info:
@@ -288,11 +341,15 @@ def imdb_info(id):
         media_info['image'] = imdb_info.get('full-size cover url')
       elif k == 'plot':
         media_info[k] = imdb_info['plot'][0].split("::")[0]
+      elif k == 'runtimes':
+        media_info['length'] = int(imdb_info['runtimes'][0])
       else:
         media_info[k] = imdb_info.get(k)
     else:
       if k == 'cover url':
         media_info['image'] = None
+      elif k == 'runtimes':
+        media_info['length'] = None
       else:
         media_info[k] = None
   #media_info['integration'] = imdb_info
@@ -330,9 +387,14 @@ def ol_info(olid):
       res['description'] = res['description']['value']
   media_info = {
     'title': res['title'],
-    'image': 'http://covers.openlibrary.org/b/id/' + str(res['covers'][0]) + '-L.jpg',
     'plot': res['description']
   }
+  media_info['image'] = None
+  if 'covers' in res:
+    try:
+      media_info['image'] = 'http://covers.openlibrary.org/b/id/' + str(res['covers'][0]) + '-L.jpg'
+    except Exception as e:
+      print(f"Couldn't assign cover url: {e}")
   return media_info
 
 def ol_search(title):
@@ -382,6 +444,14 @@ def valid_cmp(s):
     return False
   m = re.match('>|>=|=|<=|<', s)
   if m:
+    return True
+  else:
+    return False
+
+def boolean_resolve(s):
+  if s is None:
+    return None
+  elif s.lower() == 'true':
     return True
   else:
     return False

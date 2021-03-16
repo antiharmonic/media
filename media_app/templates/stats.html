@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+{# available years #}
+<div class="card-deck">
+{% for stat in stats %}
+<div class="card border-primary mb-3 float:left;" style="max-width: 30em;">
+  <div class="card-header">
+    <div>{{stat.name}}</div>
+  </div>
+  <div class="card-body">
+    <p class="card-text">{{stat.count}}</p>
+    <p class="card-text">{{'%g' % stat['sum']}}</p>
+  </div>
+</div>
+{%- endfor %}
+</div>
+{% endblock %}
