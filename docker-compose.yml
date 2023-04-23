@@ -1,0 +1,13 @@
+version: "3.3"
+
+services:
+  web:
+    build: .
+    volumes:
+      - type: bind
+        source: /home/freeze/bin/media/media_app/static/images/
+        target: /app/media_app/static/images/
+#    ports:
+#      - "5001:5001"
+    network_mode: 'host'
+    restart: 'always'

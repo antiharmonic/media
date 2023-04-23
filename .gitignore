@@ -1,4 +1,5 @@
 media_app/static/images/covers/
-config.ini
+config*.ini
 *.swp
 *.log
+logs

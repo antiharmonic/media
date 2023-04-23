@@ -8,20 +8,21 @@ from datetime import date, timedelta, datetime, time
 from configparser import ConfigParser, ExtendedInterpolation
 import requests
 import os
-from imdb import IMDb
+from imdb import Cinemagoer
 from jinja2 import Environment
 from jinja2_pluralize import pluralize
-
+from sqlalchemy.exc import ResourceClosedError
 
 cfg = ConfigParser(interpolation=ExtendedInterpolation())
-cfg.read('config.ini')
+configfile=os.environ.get('APP_CONFIG_FILE', default='config.ini')
+cfg.read(configfile)
 settings = dict(cfg.items('database'))
 db = None
 
 def app_start():
   global db
   try:
-    db = records.Database("postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}".format(**settings), pool_size=10)
+    db = records.Database("postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}".format(**settings), pool_size=50)
     print(db)
   except Exception as e:
     raise e
@@ -64,11 +65,16 @@ type_unit = {
 
 @app.before_request
 def get_db():
-  g.db = db.get_connection()
+  if hasattr(g, 'db') == False or g.db is None or g.db.open == False:
+    g.db = db.get_connection()
   g.today_str = str(date.today())
   g.year_ago_str = str(date.today()-timedelta(days=365))
   g.current_year = str(date.today().year)
 
+@app.after_request
+def close_handle(response):
+  g.db.close()
+  return response
 
 ## View endpoints
 @app.route("/")
@@ -187,11 +193,13 @@ def action_update_media():
                                     title=media['title'], begin_date=media['begin_date'], end_date=media['end_date'], id=media['id'],
                                     rating=media['rating'], subsection=media['subsection'], length=media['length'], comments=media['comments'])
     except Exception as e:
+      print(e)
       raise e
     if media['new_media_integration_id'] and media['new_media_integration_id'] != request.form.get('media_integration_id'):
       action_update_integration_data(media['id'], media['new_media_integration_id'], integrations[external])
 
-  return redirect(url_for('view_route', id=media['id']))
+  print(f"attempting to redirect to {url_for('view_route', id=media['id'])} with id={media['id']}")
+  return redirect(url_for('view_root'))
 
 @api.route("/rewatch")
 def action_rewatch():
@@ -329,7 +337,7 @@ def type_select_list():
 
 ## Integrations
 def imdb_info(id):
-  ia = IMDb()
+  ia = Cinemagoer()
   id = str(id)
   imdb_info = ia.get_movie(id)
   desired_keys = ['year', 'rating', 'cover url', 'plot', 'runtimes']
@@ -356,7 +364,7 @@ def imdb_info(id):
   return media_info
 
 def imdb_search(s):
-  ia = IMDb()
+  ia = Cinemagoer()
   media_list = ia.search_movie(s)
   parsed_media_list = list()
   for m in media_list:

@@ -1,0 +1,5 @@
+*
+!Pipfile*
+!media_app
+!config.docker.ini
+media_app/static/images/covers/

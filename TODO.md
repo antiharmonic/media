@@ -6,3 +6,7 @@
 - view page or just keep edit page and upon save go back to the previous filter?
 - integration data pop up upon datatables hover
 - search auto fill?
+- SQLAlchemy 1.4 broke records (at least my implementation). Need to move away from records to something else I guess.
+  - Using SQLAlchemy 1.1 exactly in Pipfile for now.
+- year in review cards + fast query link from the card - interesting to see everything i did in 2020 e.g.
+- add media_type to the possible query values

@@ -14,7 +14,11 @@
    <tbody>
 {% for m in media %}
   <tr>
-    {% for c in cols %}<td>{% if m[c] %}{% if c == 'title' %}<a href="/view/{{m['id']}}">{{m[c]}}</a>{% else %}{{m[c]}}{% endif %}{% endif %}</td>{% endfor %}
+    {%- with cols=cols %}
+    {%- with item=m %}
+      {% include 'line_item.html' %}
+    {%- endwith %}
+    {%- endwith %}
   </tr>
 {% endfor %}
 </tbody>

@@ -1,0 +1,11 @@
+{%- for c in cols %}
+<td>
+{%- if item[c] %}
+  {%- if c == 'title' %}
+  <a href="/edit/{{item['id']}}">{{item[c]}}{% if item['subsection'] %}: {{ item['subsection'] }}{% endif %}</a>
+  {%- else %}
+  {{item[c]}}
+  {%- endif %}
+{%- endif %}
+</td>
+{%- endfor %}

@@ -14,9 +14,11 @@
   </thead>
 {% for item in media %}
   <tr>
-    {% for c in cols %}
-      <td>{% if item[c] %}{% if c == 'title'%}<a href="/edit/{{item['id']}}">{{item[c]}}</a>{% else %}{{ item[c] }}{% endif %}{%endif%}</td>
-    {% endfor %}
+    {%- with cols=cols %}
+    {%- with item=item %}
+      {% include 'line_item.html' %}
+    {%- endwith %}
+    {%- endwith %}
   </tr>
 {% endfor %}
 </table>
