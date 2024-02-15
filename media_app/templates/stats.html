@@ -9,7 +9,7 @@
   </div>
   <div class="card-body">
     <p class="card-text">{{stat.count}}</p>
-    <p class="card-text">{{'%g' % stat['sum']}}</p>
+    <p class="card-text">{% if stat.sum %}{{'%g' % stat['sum']}}{% endif %}</p>
   </div>
 </div>
 {%- endfor %}

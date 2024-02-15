@@ -142,7 +142,14 @@ def view_list_page():
     started = False
   if 'search' in rule.rule:
     g.current_search = title
-  media = list_media(begin_date=begin_date, end_date=end_date, rating=rating, completed=completed, title=title,
+  media_type = request.args.get('type', None)
+  try:
+    media_type = int(media_type)
+  except ValueError as e:
+    media_type = None
+  except TypeError as e:
+    media_type = None
+  media = list_media(type=media_type, begin_date=begin_date, end_date=end_date, rating=rating, completed=completed, title=title,
                      begin_date_cmp=begin_date_cmp, end_date_cmp=end_date_cmp, rating_cmp=rating_cmp, onhold=onhold, started=started)
   return render_template("list.html", media=media, cols=['title', 'begin_date', 'end_date', 'rating', 'media_type_name'],  headers=header_translation)
 
@@ -286,12 +293,13 @@ def action_validate():
 # i'm guessing this will be the largest function in terms of usage/utility
 def list_media(type=None, started=True, begin_date=None, begin_date_cmp=None, end_date=None, end_date_cmp=None, completed=None, years=None, limit=None, rating=None, rating_cmp=None, title=None, onhold=None):
   predicates = list()
-  if type is not None:
+  if type is not None and isinstance(type, str):
     type = type.lower()
     valid_types = g.db.query('select * from media_type').as_dict()
     valid_types = {t['name'].lower(): t['id'] for t in valid_types}
     if type in valid_types.keys():
       type = valid_types[type]
+  if type is not None and isinstance(type, int):
       predicates.append('media_type = :type')
     # no else, if the type is in the list it will silenty fail and just include all types
   if started == True:
