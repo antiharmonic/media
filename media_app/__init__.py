@@ -114,10 +114,11 @@ def view_create_page(id=None):
 @app.route("/stats/<year>/list/<type>")
 def view_stats_list_page(year, type):
   media = action_stats_list(year, type)
-  try:
-    media_type_name = media[0].get('media_type_name', None)
-  except IndexError:
+  if len(media) == 0:
     media_type_name = None
+  else:
+    media_type_name = media[0].get('media_type_name', None)
+
   return render_template("list.html", media=media, cols=['title', 'begin_date', 'end_date', 'rating', 'media_type_name'], headers=header_translation, year=year, media_type_name=media_type_name)
 
 @app.route("/search")
