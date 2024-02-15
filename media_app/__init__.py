@@ -111,6 +111,14 @@ def view_create_page(id=None):
 
   return render_template("create_update.html", media=media, types=types, units=units)
 
+@app.route("/stats/<year>/list/<type>")
+def view_stats_list_page(year, type):
+  media = action_stats_list(year, type)
+  try:
+    media_type_name = media[0].get('media_type_name', None)
+  except IndexError:
+    media_type_name = None
+  return render_template("list.html", media=media, cols=['title', 'begin_date', 'end_date', 'rating', 'media_type_name'], headers=header_translation, year=year, media_type_name=media_type_name)
 
 @app.route("/search")
 @app.route("/list")
@@ -157,11 +165,24 @@ def view_list_page():
 @app.route("/stats")
 @app.route("/stats/<year>")
 def view_stats_page(year=None):
-  stats = action_stats(year)
-  return render_template("stats.html", stats=stats)
+  stats, current_year = action_stats(year)
+  years = action_years()
+  return render_template("stats.html", stats=stats, years=years, current_year=current_year)
 
 
 # API endpoints
+@api.route("/years")
+def action_years():
+  sql = "select distinct extract(year from end_date) as years from media where end_date is not null order by years desc"
+  years = g.db.query(sql).all()
+  years = [int(y['years']) for y in years]
+  rule = request.url_rule
+  if 'api' in rule.rule:
+    return Response(json.dumps(years), mimetype="application/json")
+  else:
+    return years
+
+
 @api.route("/create", methods=['GET', 'POST'])
 @api.route("/update", methods=['GET', 'POST'])
 def action_update_media():
@@ -222,16 +243,29 @@ def action_stats(year=None):
     year = int(year)
     if year < min_year or year > max_year:
       year = g.current_year
-  sql = """select mt.name, media.length_unit::integer, extract(year from end_date)::integer as "year",
+  sql = """select mt.name, mt.id as media_type, media.length_unit::integer, extract(year from end_date)::integer as "year",
             count(media.id), sum(length) from media join media_type mt on mt.id = media.media_type
             where end_date is not null and extract(year from end_date) = :year
-            group by 1, 2, 3 order by 2,3 desc"""
+            group by 1, 2, 3, 4 order by 3,4 desc"""
   stats = g.db.query(sql, year=year)
   rule = request.url_rule
   if 'api' in rule.rule:
     return Response(stats.export('json'), mimetype="application/json")
   else:
-    return stats.as_dict()
+    return stats.as_dict(), year
+
+
+@api.route("/stats/<year>/list/<type>")
+def action_stats_list(year, type):
+  year = int(year)
+  type = int(type)
+  sql = """select media.*, mt.name as media_type_name from media join media_type mt on mt.id = media.media_type where mt.id = :type and extract(year from end_date) = :year"""
+  media = g.db.query(sql, year=year, type=type)
+  rule = request.url_rule
+  if 'api' in rule.rule:
+    return Response(media.export('json'), mimetype="application/json")
+  else:
+    return media.as_dict()
 
 
 @api.route("/list")

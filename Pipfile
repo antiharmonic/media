@@ -5,7 +5,6 @@ name = "pypi"
 
 [packages]
 Flask = "*"
-IMDbPY = "*"
 configparser = "*"
 Goodreads = "*"
 jinja2_pluralize = "*"
@@ -13,6 +12,8 @@ records = "*"
 psycopg2-binary = "*"
 sqlalchemy = "==1.1"
 cinemagoer = "*"
+pydantic = "==1.10.14"
+requests = "==2.26.0"
 
 [dev-packages]
 

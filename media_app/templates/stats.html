@@ -1,11 +1,16 @@
 {% extends 'base.html' %}
 {% block content %}
-{# available years #}
+<select id="year_dropdown">
+{%- for y in years %}
+<option{% if y == current_year %} selected{% endif %}>{{ y }}</option>
+{%- endfor %}
+</select>
+<p />
 <div class="card-deck">
 {% for stat in stats %}
 <div class="card border-primary mb-3 float:left;" style="max-width: 30em;">
   <div class="card-header">
-    <div>{{stat.name}}</div>
+    <div><a href="/stats/{{stat.year}}/list/{{stat.media_type}}">{{stat.name | pluralize }}<a></div>
   </div>
   <div class="card-body">
     <p class="card-text">{{stat.count}}</p>
@@ -14,4 +19,13 @@
 </div>
 {%- endfor %}
 </div>
+{% endblock %}
+{% block scripts %}
+<script language="javascript">
+<!--
+$("#year_dropdown").change(function() {
+  location.href = "/stats/" + $("#year_dropdown").val();
+});
+-->
+</script>
 {% endblock %}

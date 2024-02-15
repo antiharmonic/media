@@ -4,7 +4,7 @@
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/dt-1.10.23/cr-1.5.3/fh-3.1.8/datatables.min.css"/>
 {% endblock %}
 {% block content %}
-
+{% if media_type_name %}<h3>{{ year }} {{ media_type_name | pluralize }} list</h3>{% endif %}
 <table class="table" id="media_list">
   <thead>
     <tr>{% for c in cols %}
