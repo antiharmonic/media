@@ -1,0 +1,26 @@
+#!/bin/bash
+
+monitored_directory="media_app"
+previous_commit=$(git rev-parse HEAD^)
+current_branch=$(git branch --show-current)
+
+if git diff-tree --name-only --no-commit-id -r "$previous_commit" | grep -q "^$monitored_directory/"; then
+
+  if [[ "$current_branch" == "master" || "$current_branch" == "main" ]]; then
+    ./docker-deploy.sh
+  else
+    echo "Skipping post-commit hook for branch: $current_branch"
+    exit 0
+  fi
+else
+    echo "Skipping post-commit hook, no changes in dir $monitored_directory/"
+  exit 0
+fi
+
+if [ $? -ne 0 ]; then
+  echo "Docker build and deploy failed"
+  exit 1
+fi
+
+exit 0
+
