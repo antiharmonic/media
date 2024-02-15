@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# add this to local .git/hooks for rebuilding/deploying on commit
+# called from .githooks/post-commit, add that script to .git/hooks if you want this to run after a commit
 
 docker-compose down
 docker-compose build
