@@ -4,7 +4,7 @@ monitored_directory="media_app"
 previous_commit=$(git rev-parse HEAD^)
 current_branch=$(git branch --show-current)
 
-if git diff-tree --name-only --no-commit-id -r "$previous_commit" | grep -q "^$monitored_directory/"; then
+if git diff-tree --name-only --no-commit-id -r "$previous_commit" master | grep -q "^$monitored_directory/"; then
 
   if [[ "$current_branch" == "master" || "$current_branch" == "main" ]]; then
     ./docker-deploy.sh
