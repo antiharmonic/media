@@ -14,7 +14,7 @@
   </div>
   <div class="card-body">
     <p class="card-text">{{stat.count}}</p>
-    <p class="card-text">{% if stat.sum %}{{'%g' % stat['sum']}}{% endif %}</p>
+    <p class="card-text">{% if stat.sum %}{{'%g' % stat['sum']}} {{ units[stat['length_unit']] }}{% endif %}</p>
   </div>
 </div>
 {%- endfor %}
