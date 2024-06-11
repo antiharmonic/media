@@ -30,7 +30,7 @@ if (ol_types.includes(current_type)) {
   search_url = '/api/integration/ol/search/';
 }
 
-$.getJSON(search_url + title, function(data) {
+$.getJSON(search_url + encodeURIComponent(title), function(data) {
   var html = "<div><select id=\"integration_select\">\n<option></option>";
   local_data = {};
   $.each( data, function(idx, ele) {

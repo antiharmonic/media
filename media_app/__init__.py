@@ -12,11 +12,15 @@ from imdb import Cinemagoer
 from jinja2 import Environment
 from jinja2_pluralize import pluralize
 from sqlalchemy.exc import ResourceClosedError
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+#import urllib.parse
 
 cfg = ConfigParser(interpolation=ExtendedInterpolation())
 configfile=os.environ.get('APP_CONFIG_FILE', default='config.ini')
 cfg.read(configfile)
 settings = dict(cfg.items('database'))
+yt_api_key = cfg['youtube']['youtube_api_key']
 db = None
 
 def app_start():
@@ -168,7 +172,9 @@ def view_list_page():
 def view_stats_page(year=None):
   stats, current_year = action_stats(year)
   years = action_years()
-  return render_template("stats.html", stats=stats, years=years, current_year=current_year)
+  units = g.db.query("select * from media_length").as_dict()
+  units = {u['length_unit_id']: u['name'] for u in units}
+  return render_template("stats.html", stats=stats, years=years, units=units, current_year=current_year)
 
 
 # API endpoints
@@ -187,7 +193,7 @@ def action_years():
 @api.route("/create", methods=['GET', 'POST'])
 @api.route("/update", methods=['GET', 'POST'])
 def action_update_media():
-  fields = ['title', 'subsection', 'begin_date', 'end_date', 'new_media_integration_id', 'rating', 'length', 'comments', 'media_type', 'id']
+  fields = ['title', 'subsection', 'begin_date', 'end_date', 'new_media_integration_id', 'rating', 'length', 'comments', 'media_type', 'id', 'music_theme']
   optional_numeric_fields = ['begin_date', 'end_date', 'rating', 'length']
   media = dict()
   for k in fields:
@@ -202,14 +208,15 @@ def action_update_media():
   if int(media['media_type']) in integrations['ol']['media_types']:
     external = 'ol'
   print(external)
+  music_title = media['music_theme'] and get_video_title(media['music_theme'])
   if 'create' in rule.rule:
     try:
-      res = g.db.query("""insert into media (title, begin_date, end_Date, media_type, rating, subsection, length, comments, length_unit)
-                                    values (:title,:begin_date,:end_date,:media_type,:rating,:subsection,:length,:comments,:length_unit) 
+      res = g.db.query("""insert into media (title, begin_date, end_Date, media_type, rating, subsection, length, comments, length_unit, music_theme_url, music_theme_title)
+                                    values (:title,:begin_date,:end_date,:media_type,:rating,:subsection,:length,:comments,:length_unit,:music_theme_url,:music_theme_title) 
                                     returning id""",
                                     title=media['title'], begin_date=media['begin_date'], end_date=media['end_date'], media_type=media['media_type'],
                                     rating=media['rating'], subsection=media['subsection'], length=media['length'], comments=media['comments'],
-                                    length_unit=type_unit[media['media_type']]).first().as_dict()
+                                    length_unit=type_unit[media['media_type']], music_theme_url=media['music_theme'], music_theme_title=music_title).first().as_dict()
     except Exception as e:
       raise e
     media['id'] = res['id']
@@ -218,9 +225,10 @@ def action_update_media():
   elif 'update' in rule.rule:
     try:
       g.db.query("""update media set title = :title, begin_date = :begin_date, end_date = :end_date, rating = :rating, subsection = :subsection,
-                          length = :length, comments = :comments where id = :id""",
+                          length = :length, comments = :comments, music_theme_url = :music_theme_url, music_theme_title = :music_theme_title where id = :id""",
                                     title=media['title'], begin_date=media['begin_date'], end_date=media['end_date'], id=media['id'],
-                                    rating=media['rating'], subsection=media['subsection'], length=media['length'], comments=media['comments'])
+                                    rating=media['rating'], subsection=media['subsection'], length=media['length'], comments=media['comments'],
+                                    music_theme_url=media['music_theme'], music_theme_title=music_title)
     except Exception as e:
       print(e)
       raise e
@@ -326,16 +334,16 @@ def action_validate():
 
 # utility/common functions
 # i'm guessing this will be the largest function in terms of usage/utility
-def list_media(type=None, started=True, begin_date=None, begin_date_cmp=None, end_date=None, end_date_cmp=None, completed=None, years=None, limit=None, rating=None, rating_cmp=None, title=None, onhold=None):
+def list_media(mtype=None, started=True, begin_date=None, begin_date_cmp=None, end_date=None, end_date_cmp=None, completed=None, years=None, limit=None, rating=None, rating_cmp=None, title=None, onhold=None):
   predicates = list()
-  if type is not None and isinstance(type, str):
-    type = type.lower()
+  if mtype is not None and isinstance(mtype, str):
+    mtype = mtype.lower()
     valid_types = g.db.query('select * from media_type').as_dict()
     valid_types = {t['name'].lower(): t['id'] for t in valid_types}
-    if type in valid_types.keys():
-      type = valid_types[type]
-  if type is not None and isinstance(type, int):
-      predicates.append('media_type = :type')
+    if mtype in valid_types.keys():
+      mtype = valid_types[mtype]
+  if mtype is not None and isinstance(mtype, int):
+      predicates.append('media_type = :mtype')
     # no else, if the type is in the list it will silenty fail and just include all types
   if started == True:
     predicates.append('begin_date is not null')
@@ -367,14 +375,14 @@ def list_media(type=None, started=True, begin_date=None, begin_date_cmp=None, en
     sql += f" limit {limit}"
 
   print(f"Currently running query {sql}")
-  media = db.query(sql, type=type, begin_date=begin_date, end_date=end_date, completed=completed, rating=rating, title=title).as_dict()
+  media = db.query(sql, mtype=mtype, begin_date=begin_date, end_date=end_date, completed=completed, rating=rating, title=title).as_dict()
   return media
 
 def type_select_list():
   types = g.db.query("select * from media_type")
   str = "<select name=\"media_type\" class=\"form-control\">\n"
-  for type in types:
-    str += f"\t<option value=\"{type.id}\">{type.name}</option>\n"
+  for media_type in types:
+    str += f"\t<option value=\"{media_type.id}\">{media_type.name}</option>\n"
   str += "</select>"
   return str
 
@@ -452,6 +460,7 @@ def ol_search(title):
   url = "https://openlibrary.org/search.json?title="
   title = title.replace('&', 'and')
   title = f"\"{title}\""
+  #title = urllib.parse.quote(title)
   res = requests.get(url+title)
   if res.status_code == 200:
     res = res.json()
@@ -480,6 +489,32 @@ def integration_image_download(url, media_id):
       f.write(res.content)
   return filename
 
+def get_video_title(video_url):
+  print(f"Attempting to get youtube title from url {video_url}")
+  match = re.search(r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})", video_url)
+  if match:
+    video_id = match.group(1)
+    print(f"Got a youtube match: {video_id}")
+  else:
+    print(f"Invalid Youtube URL {video_url}")
+    return None
+
+  youtube = build('youtube', 'v3', developerKey=yt_api_key)
+  try:
+    request = youtube.videos().list(
+      part='snippet',
+      id=video_id
+    )
+    response = request.execute()
+    if response['items']:
+      print("Returning Youtube Title")
+      return response['items'][0]['snippet']['title']
+    else:
+      print(f"Video not found for video ID: {video_id}")
+      return None
+  except HttpError as e:
+    print(f"HttpError: {e}")
+    return None
 
 ##HELPERS
 def json_serial(obj):
@@ -521,6 +556,8 @@ integrations = {
     'id': 2
   }
 }
+
+
 
 app.register_blueprint(api)
 

@@ -8,12 +8,13 @@ Flask = "*"
 configparser = "*"
 Goodreads = "*"
 jinja2_pluralize = "*"
-records = "*"
+records = "==0.5.3"
 psycopg2-binary = "*"
 sqlalchemy = "==1.3.23"
 cinemagoer = "*"
 pydantic = "==1.10.14"
 requests = ">=2.31.0"
+google-api-python-client = "*"
 
 [dev-packages]
 
