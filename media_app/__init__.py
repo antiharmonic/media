@@ -326,6 +326,10 @@ def action_admin_get_covers():
     integration_image_download(info['image'], m.media_id)
   return f"updated len(m)"
 
+@api.route("/integration/yt/title/<path:url>")
+def action_get_youtube_title(url):
+  return Response(json.dumps(get_video_title(url)), mimetype="application/json")
+
 # real time validation for e.g. media creation so you don't enter a title that already exists
 @api.route("/validate")
 def action_validate():
@@ -498,6 +502,11 @@ def get_video_title(video_url):
   else:
     print(f"Invalid Youtube URL {video_url}")
     return None
+  ytcache = db.query("select * from youtube_metadata").as_dict()
+  ytcache = {c['id']: c['title'] for c in ytcache}
+  if video_id in ytcache:
+    print("Found YouTube title in cache, skipping API call")
+    return ytcache[video_id]
 
   youtube = build('youtube', 'v3', developerKey=yt_api_key)
   try:
@@ -507,7 +516,10 @@ def get_video_title(video_url):
     )
     response = request.execute()
     if response['items']:
+      video_title = response['items'][0]['snippet']['title']
+      video_channel = response['items'][0]['snippet']['channelTitle']
       print("Returning Youtube Title")
+      db.query("insert into youtube_metadata (id, title, channel) values (:id, :title, :channel)", id=video_id, title=video_title, channel=video_channel)
       return response['items'][0]['snippet']['title']
     else:
       print(f"Video not found for video ID: {video_id}")
