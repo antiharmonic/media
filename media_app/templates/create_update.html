@@ -56,10 +56,10 @@
     </div>
     <div class="form-group mb-3">
       <label for="">Music Theme</label>
-      <input class="form-control" type="text" name="music_theme"{% if media and media.music_theme_url %} value="{{media.music_theme_url}}"{% endif %}>
+      <input class="form-control" type="text" id="music_theme" name="music_theme"{% if media and media.music_theme_url %} value="{{media.music_theme_url}}"{% endif %}>
     </div>
     <div class="mb-3">
-      <span class="form-text" id="length_unit">{% if media and media.music_theme_title %}<a href="{{media.music_theme_url}}" target="_blank">{{media.music_theme_title}}</a>{% endif %}</span>
+      <span class="form-text" id="music_theme_title">{% if media and media.music_theme_title %}<a href="{{media.music_theme_url}}" target="_blank">{{media.music_theme_title}}</a>{% endif %}</span>
     </div>
     <div class="form-group mb-3">
       <label>Comments:</label>
@@ -77,4 +77,5 @@
 {% endblock %}
 {% block scripts %}
 <script src="/static/js/imdb.js" data-title="{{media.title}}"></script>
+<script src="/static/js/youtube.js"></script>
 {% endblock %}
