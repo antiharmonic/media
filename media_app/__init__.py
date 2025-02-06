@@ -162,7 +162,7 @@ def view_list_page():
     media_type = None
   except TypeError as e:
     media_type = None
-  media = list_media(type=media_type, begin_date=begin_date, end_date=end_date, rating=rating, completed=completed, title=title,
+  media = list_media(mtype=media_type, begin_date=begin_date, end_date=end_date, rating=rating, completed=completed, title=title,
                      begin_date_cmp=begin_date_cmp, end_date_cmp=end_date_cmp, rating_cmp=rating_cmp, onhold=onhold, started=started)
   return render_template("list.html", media=media, cols=['title', 'begin_date', 'end_date', 'rating', 'media_type_name'],  headers=header_translation)
 
