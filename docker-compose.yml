@@ -11,3 +11,10 @@ services:
 #      - "5001:5001"
     network_mode: 'host'
     restart: 'always'
+
+  cinema:
+    build:
+      context: ./cinema_service
+      dockerfile: Dockerfile
+    network_mode: 'host'
+    restart: always

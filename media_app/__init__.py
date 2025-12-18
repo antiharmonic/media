@@ -8,7 +8,6 @@ from datetime import date, timedelta, datetime, time
 from configparser import ConfigParser, ExtendedInterpolation
 import requests
 import os
-from imdb import Cinemagoer
 from jinja2 import Environment
 from jinja2_pluralize import pluralize
 from sqlalchemy.exc import ResourceClosedError
@@ -18,6 +17,7 @@ from googleapiclient.errors import HttpError
 
 cfg = ConfigParser(interpolation=ExtendedInterpolation())
 configfile=os.environ.get('APP_CONFIG_FILE', default='config.ini')
+CINEMA_URL = os.environ.get('CINEMA_URL', default="http://localhost:5005/")
 cfg.read(configfile)
 settings = dict(cfg.items('database'))
 yt_api_key = cfg['youtube']['youtube_api_key']
@@ -392,9 +392,10 @@ def type_select_list():
 
 ## Integrations
 def imdb_info(id):
-  ia = Cinemagoer()
   id = str(id)
-  imdb_info = ia.get_movie(id)
+  r = requests.get(f"{CINEMA_URL}/movie/{id}")
+  r.raise_for_status()
+  imdb_info = r.json()
   desired_keys = ['year', 'rating', 'cover url', 'plot', 'runtimes']
   media_info = {'title': imdb_info.get('title')}
   for k in desired_keys:
@@ -419,14 +420,15 @@ def imdb_info(id):
   return media_info
 
 def imdb_search(s):
-  ia = Cinemagoer()
-  media_list = ia.search_movie(s)
+  r = requests.get(f"{CINEMA_URL}/search", params={"q": s})
+  r.raise_for_status()
+  media_list = r.json()
   parsed_media_list = list()
   for m in media_list:
     tmp = dict()
     tmp['title'] = m.get('title')
     tmp['year']  = m.get('year')
-    tmp['id'] = m.getID()
+    tmp['id'] = m.get('id')
     if 'cover url' in m:
       tmp['cover'] = m.get('cover url')
     else:

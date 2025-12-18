@@ -10,3 +10,7 @@
   - Using SQLAlchemy 1.1 exactly in Pipfile for now.
 - year in review cards + fast query link from the card - interesting to see everything i did in 2020 e.g.
 - add media_type to the possible query values
+- add db column/input for yt link so e.g. when i read the bell jar i listened to https://www.youtube.com/watch?v=hQKGP3J6Q9s - the app should suck the title of the vid up so if the vid goes private i have history
+- make it so theme isn't shown on e.g. anime, movies, tv shows, doesn't make sense there
+- make it so theme automagically populates during creation
+- don't hit yt api if the url hasn't changed during update.
