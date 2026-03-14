@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% block styles %}
+<style>
+  .shelf-wrapper {
+    background: #f0ebe0;
+    border-radius: 6px;
+    padding: 24px 24px 0;
+    margin-bottom: 32px;
+  }
+
+  .shelf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 3px;
+    padding-bottom: 0;
+  }
+
+  .shelf-board {
+    height: 14px;
+    background: linear-gradient(to bottom, #a0784a, #7a5a30);
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    margin-bottom: 28px;
+  }
+
+  .spine {
+    width: 44px;
+    height: 220px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: visible;
+    cursor: pointer;
+  }
+
+  .spine-body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 2px 0 0 2px;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.25), inset -2px 0 4px rgba(0,0,0,0.1);
+    position: relative;
+  }
+
+  /* Cover spine body */
+  .spine.has-cover .spine-body {
+    background-size: cover;
+    background-position: left top;
+  }
+
+  /* No-cover spine body: colored + vertical title */
+  .spine.no-cover .spine-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .spine-title-vertical {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: 200px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(0,0,0,0.75);
+    background: rgba(255,255,255,0.80);
+    padding: 3px 2px;
+    border-radius: 2px;
+  }
+
+  /* Popup */
+  .spine-popup {
+    position: fixed;
+    width: 195px;
+    height: 293px;
+    border-radius: 3px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 1000;
+    overflow: hidden;
+  }
+
+  /* Cover popup: just the image */
+  .spine.has-cover .spine-popup {
+    background-size: cover;
+    background-position: center top;
+  }
+
+  /* No-cover popup: colored background + horizontal title */
+  .spine.no-cover .spine-popup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 18px 10px 10px;
+  }
+
+  .popup-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    color: rgba(0,0,0,0.8);
+    background: rgba(255,255,255,0.88);
+    padding: 5px 7px;
+    border-radius: 3px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .spine a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-3">
+  <h4 class="mb-0">{{ current_year }} Shelf</h4>
+  <select id="year_dropdown" class="form-select form-select-sm" style="width: auto">
+    {%- for y in years %}
+    <option {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+    {%- endfor %}
+  </select>
+</div>
+
+<div class="shelf-wrapper">
+  <div class="shelf">
+    {% for item in media %}
+    {% set color = item.id | spine_color %}
+    <div class="spine {% if item.cover_image %}has-cover{% else %}no-cover{% endif %}">
+
+      {# Popup shown on hover #}
+      <div class="spine-popup"
+           {% if item.cover_image %}
+             style="background-image: url('/static/images/covers/{{ item.cover_image }}')"
+           {% else %}
+             style="background-color: {{ color }}"
+           {% endif %}>
+        {% if not item.cover_image %}
+        <div class="popup-title">{{ item.title }}{% if item.subsection %}<br><small>{{ item.subsection }}</small>{% endif %}</div>
+        {% endif %}
+      </div>
+
+      {# The spine itself #}
+      <a href="/edit/{{ item.id }}" title="{{ item.title }}{% if item.subsection %} — {{ item.subsection }}{% endif %}">
+        <div class="spine-body"
+             {% if item.cover_image %}
+               style="background-image: url('/static/images/covers/{{ item.cover_image }}')"
+             {% else %}
+               style="background-color: {{ color }}"
+             {% endif %}>
+          {% if not item.cover_image %}
+          <span class="spine-title-vertical">{{ item.title }}{% if item.subsection %} · {{ item.subsection }}{% endif %}</span>
+          {% endif %}
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="shelf-board"></div>
+</div>
+
+{% if media | length == 0 %}
+<p class="text-muted">Nothing completed in {{ current_year }} yet.</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $("#year_dropdown").change(function() {
+    location.href = "/shelf/" + $("#year_dropdown").val();
+  });
+
+  function positionPopup(popup, e) {
+    var w = popup.outerWidth();
+    var h = popup.outerHeight();
+    var x = e.clientX - w / 2;
+    var y = e.clientY + 14;
+    x = Math.max(8, Math.min(x, window.innerWidth - w - 8));
+    y = Math.max(8, Math.min(y, window.innerHeight - h - 8));
+    popup.css({ left: x, top: y });
+  }
+
+  $('.spine').on('mouseenter', function(e) {
+    var popup = $(this).find('.spine-popup');
+    positionPopup(popup, e);
+    popup.css('opacity', 1);
+  }).on('mousemove', function(e) {
+    positionPopup($(this).find('.spine-popup'), e);
+  }).on('mouseleave', function() {
+    $(this).find('.spine-popup').css('opacity', 0);
+  });
+</script>
+{% endblock %}

@@ -3,8 +3,105 @@
 {% block styles %}
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/dt-1.10.23/cr-1.5.3/fh-3.1.8/datatables.min.css"/>
 {% endblock %}
+
 {% block content %}
 {% if media_type_name %}<h3>{{ year }} {{ media_type_name | pluralize }} list</h3>{% endif %}
+
+{% if types %}
+{% set cmp_ops = ['>=', '<=', '=', '>', '<'] %}
+
+{# Determine current status for pre-selection #}
+{% if args.get('completed') == 'True' %}
+  {% set status_val = 'completed' %}
+{% elif args.get('onhold') == 'True' %}
+  {% set status_val = 'onhold' %}
+{% elif args.get('completed') == 'False' and args.get('started') == 'False' %}
+  {% set status_val = 'todo' %}
+{% elif args.get('completed') == 'False' and args.get('started') == 'True' %}
+  {% set status_val = 'in_progress' %}
+{% else %}
+  {% set status_val = 'all' %}
+{% endif %}
+
+<div class="mb-2">
+  <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filter-panel" aria-expanded="{{ 'true' if has_filters else 'false' }}">
+    Filter
+  </button>
+</div>
+<div class="collapse {{ 'show' if has_filters else '' }}" id="filter-panel">
+  <div class="card card-body mb-3">
+    <form id="filter-form" action="/list" method="get">
+      <div class="row g-2 mb-2">
+        <div class="col-md-6">
+          <label class="form-label">Title</label>
+          <input class="form-control form-control-sm" type="text" name="title" value="{{ args.get('title', '') }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Type</label>
+          <select class="form-select form-select-sm" name="type">
+            <option value="">Any</option>
+            {% for t in types %}
+            <option value="{{ t.id }}" {% if args.get('type') == t.id|string %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-md-4">
+          <label class="form-label">Status</label>
+          <select class="form-select form-select-sm" id="status-select">
+            <option value="all" {% if status_val == 'all' %}selected{% endif %}>All</option>
+            <option value="in_progress" {% if status_val == 'in_progress' %}selected{% endif %}>Currently Consuming</option>
+            <option value="todo" {% if status_val == 'todo' %}selected{% endif %}>Todo</option>
+            <option value="onhold" {% if status_val == 'onhold' %}selected{% endif %}>On Hold</option>
+            <option value="completed" {% if status_val == 'completed' %}selected{% endif %}>Completed</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Rating</label>
+          <div class="input-group input-group-sm">
+            <select class="form-select" name="rating_cmp" style="max-width: 70px">
+              {% for op in cmp_ops %}
+              <option {% if args.get('rating_cmp', '>=') == op %}selected{% endif %}>{{ op }}</option>
+              {% endfor %}
+            </select>
+            <input class="form-control" type="number" step="0.1" min="0" max="10" name="rating" value="{{ args.get('rating', '') }}">
+          </div>
+        </div>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-md-6">
+          <label class="form-label">Start Date</label>
+          <div class="input-group input-group-sm">
+            <select class="form-select" name="begin_date_cmp" style="max-width: 70px">
+              {% for op in cmp_ops %}
+              <option {% if args.get('begin_date_cmp', '>=') == op %}selected{% endif %}>{{ op }}</option>
+              {% endfor %}
+            </select>
+            <input class="form-control" type="date" name="begin_date" value="{{ args.get('begin_date', '') }}">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">End Date</label>
+          <div class="input-group input-group-sm">
+            <select class="form-select" name="end_date_cmp" style="max-width: 70px">
+              {% for op in cmp_ops %}
+              <option {% if args.get('end_date_cmp', '<=') == op %}selected{% endif %}>{{ op }}</option>
+              {% endfor %}
+            </select>
+            <input class="form-control" type="date" name="end_date" value="{{ args.get('end_date', '') }}">
+          </div>
+        </div>
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        <a href="/list" class="btn btn-outline-secondary btn-sm">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
 <table class="table" id="media_list">
   <thead>
     <tr>{% for c in cols %}
@@ -24,11 +121,28 @@
 </tbody>
 </table>
 {% endblock %}
+
 {% block scripts %}
 <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/dt-1.10.23/cr-1.5.3/fh-3.1.8/datatables.min.js"></script>
-<script language="javascript">
-$(document).ready( function () {
-    $('#media_list').DataTable();
+<script>
+$(document).ready(function () {
+  $('#media_list').DataTable();
+});
+
+var statusParams = {
+  'all':        {},
+  'completed':  {completed: 'True'},
+  'onhold':     {onhold: 'True'},
+  'todo':       {completed: 'False', started: 'False', onhold: 'False'},
+  'in_progress':{completed: 'False', started: 'True',  onhold: 'False'}
+};
+
+$('#filter-form').on('submit', function() {
+  var status = $('#status-select').val();
+  var params = statusParams[status] || {};
+  $.each(params, function(key, val) {
+    $('<input>').attr({type: 'hidden', name: key, value: val}).appendTo('#filter-form');
+  });
 });
 </script>
 {% endblock %}

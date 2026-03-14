@@ -8,6 +8,7 @@ from datetime import date, timedelta, datetime, time
 from configparser import ConfigParser, ExtendedInterpolation
 import requests
 import os
+import hashlib
 from jinja2 import Environment
 from jinja2_pluralize import pluralize
 from sqlalchemy.exc import ResourceClosedError
@@ -164,7 +165,41 @@ def view_list_page():
     media_type = None
   media = list_media(mtype=media_type, begin_date=begin_date, end_date=end_date, rating=rating, completed=completed, title=title,
                      begin_date_cmp=begin_date_cmp, end_date_cmp=end_date_cmp, rating_cmp=rating_cmp, onhold=onhold, started=started)
-  return render_template("list.html", media=media, cols=['title', 'begin_date', 'end_date', 'rating', 'media_type_name'],  headers=header_translation)
+  types = g.db.query("select * from media_type order by id").as_dict()
+  filter_keys = {'title', 'type', 'completed', 'onhold', 'started', 'rating', 'begin_date', 'end_date'}
+  has_filters = bool(filter_keys.intersection(request.args.keys()))
+  return render_template("list.html", media=media, cols=['title', 'begin_date', 'end_date', 'rating', 'media_type_name'],
+                         headers=header_translation, types=types, args=request.args, has_filters=has_filters)
+
+
+@app.route("/shelf")
+@app.route("/shelf/<year>")
+def view_shelf_page(year=None):
+  if year is None:
+    year = int(g.current_year)
+  else:
+    year = int(year)
+    if year < min_year or year > max_year:
+      year = int(g.current_year)
+  sql = """select media.id, media.title, media.rating, media.end_date, media.subsection,
+                  mid.cover_image
+           from media
+           left join media_integration_data mid on mid.media_id = media.id
+           where media.end_date is not null
+             and extract(year from media.end_date) = :year
+             and media.media_type in (1, 4)
+           order by media.end_date asc"""
+  media = g.db.query(sql, year=year).as_dict()
+  years = action_years()
+  return render_template("shelf.html", media=media, years=years, current_year=year)
+
+
+def spine_color(media_id):
+  h = hashlib.md5(str(media_id).encode()).hexdigest()
+  hue = int(h[0:4], 16) % 360
+  return f'hsl({hue}, 50%, 68%)'
+
+app.jinja_env.filters['spine_color'] = spine_color
 
 
 @app.route("/stats")
