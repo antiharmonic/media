@@ -1,8 +1,7 @@
 from fastapi import FastAPI, HTTPException
-from imdb import Cinemagoer
+import imdbinfo
 
 app = FastAPI()
-ia = Cinemagoer()
 
 @app.get("/health")
 def health():
@@ -11,31 +10,34 @@ def health():
 @app.get("/search")
 def search(q: str):
     try:
-        movies = ia.search_movie(q)
+        results = imdbinfo.search_title(q)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    return [{"id": m.movieID, "title": m.get("title"), "year": m.get("year"), "cover url": m.get("cover url", None)} for m in movies[:10]]
+    out = []
+    for t in results.titles[:10]:
+        out.append({
+            "id": t.imdbId,
+            "title": t.title,
+            "year": t.year,
+            "cover url": t.cover_url,
+        })
+    return out
 
 @app.get("/movie/{movie_id}")
 def movie(movie_id: str):
+    if not movie_id.startswith("tt"):
+        movie_id = "tt" + movie_id
     try:
-        m = ia.get_movie(movie_id)
+        m = imdbinfo.get_movie(movie_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    print(m, flush=True)
-    movie = {
+    return {
         "id": movie_id,
-        "title": m.get("title"),
-        "year": m.get("year"),
-        "rating": m.get("rating"),
-        "genres": m.get("genres"),
-        "plot": m.get("plot"),
-        "cover url": m.get("cover url"),
-        "full-size cover url": m.get("full-size cover url"),
+        "title": m.title,
+        "year": m.year,
+        "rating": m.rating,
+        "cover url": m.cover_url,
+        "full-size cover url": m.cover_url,
+        "plot": [m.plot] if m.plot else [],
+        "runtimes": [str(m.duration)] if m.duration else [],
     }
-
-    if m.get("runtimes"):
-       movie["runtimes"] = m.get("runtimes", [])
-
-    return movie
-

@@ -9,6 +9,7 @@
   <input type="hidden" name="current_integration_id" value="{% if media.media_integration_id %}{{media.media_integration_id}}{%endif%}" id="current_integration_id">
   <input type="hidden" name="new_media_integration_id" id="new_media_integration_id">
   <input type="hidden" name="id" value="{% if media %}{{media.id}}{% endif %}">
+  <input type="hidden" name="referrer" value="{{ referrer }}">
   <fieldset>
     <div class="form-group mb-3">
       <label for="">Type</label>
@@ -69,7 +70,17 @@
   </fieldset>
 </form>
 </div>
-<div class="col" id="integration">
+<div class="col">
+  {% if media and media.cover_image %}
+  <img src="/static/images/covers/{{ media.cover_image }}" height="400" class="mb-2 d-block">
+  {% endif %}
+  {% if media and media.synopsis %}
+  <p class="small text-muted">{{ media.synopsis }}</p>
+  {% endif %}
+  <button type="button" class="btn btn-outline-secondary btn-sm mb-2" id="integration_toggle" style="display:none">
+    {% if media and media.cover_image %}Change cover &amp; metadata{% else %}Find cover &amp; metadata{% endif %}
+  </button>
+  <div id="integration" style="display:none"></div>
 </div>
 </div>
 {% endblock %}

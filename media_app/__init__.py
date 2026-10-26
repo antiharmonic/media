@@ -114,7 +114,8 @@ def view_create_page(id=None):
   if 'view' in rule.rule:
     return render_template("view.html", media=media, types=types, units=units)
 
-  return render_template("create_update.html", media=media, types=types, units=units)
+  referrer = request.referrer or url_for('view_root')
+  return render_template("create_update.html", media=media, types=types, units=units, referrer=referrer)
 
 @app.route("/stats/<year>/list/<type>")
 def view_stats_list_page(year, type):
@@ -267,11 +268,11 @@ def action_update_media():
     except Exception as e:
       print(e)
       raise e
-    if media['new_media_integration_id'] and media['new_media_integration_id'] != request.form.get('media_integration_id'):
+    if media['new_media_integration_id']:
       action_update_integration_data(media['id'], media['new_media_integration_id'], integrations[external])
 
-  print(f"attempting to redirect to {url_for('view_route', id=media['id'])} with id={media['id']}")
-  return redirect(url_for('view_root'))
+  referrer = request.form.get('referrer') or url_for('view_root')
+  return redirect(referrer)
 
 @api.route("/rewatch")
 def action_rewatch():
@@ -439,9 +440,9 @@ def imdb_info(id):
       if k == 'cover url':
         media_info['image'] = imdb_info.get('full-size cover url')
       elif k == 'plot':
-        media_info[k] = imdb_info['plot'][0].split("::")[0]
+        media_info[k] = imdb_info['plot'][0].split("::")[0] if imdb_info['plot'] else None
       elif k == 'runtimes':
-        media_info['length'] = int(imdb_info['runtimes'][0])
+        media_info['length'] = int(imdb_info['runtimes'][0]) if imdb_info['runtimes'] else None
       else:
         media_info[k] = imdb_info.get(k)
     else:
